@@ -1,53 +1,78 @@
 const db = require("../config/db");
+const uploadToCloudinary = require("../utils/cloudinaryUpload");
 
 // ==========================
 // Add Service
 // ==========================
-// Add Service
-const addService = (req, res) => {
+const addService = async (req, res) => {
 
-    const {
-        service_name,
-        short_description,
-        description
-    } = req.body;
+    try {
 
-    const image = req.file
-        ? req.file.path.replace(/\\/g, "/")
-        : null;
-
-    const sql = `
-        INSERT INTO services
-        (
+        const {
             service_name,
             short_description,
-            description,
-            image
-        )
-        VALUES (?, ?, ?, ?)
-    `;
+            description
+        } = req.body;
 
-    db.query(
-        sql,
-        [
-            service_name,
-            short_description,
-            description,
-            image
-        ],
-        (err) => {
+        const image = req.file
+            ? await uploadToCloudinary(
+                req.file,
+                "amtec-technologies/services",
+                "image"
+            )
+            : null;
 
-            if (err)
-                return res.status(500).json(err);
+        const sql = `
+            INSERT INTO services
+            (
+                service_name,
+                short_description,
+                description,
+                image
+            )
+            VALUES (?, ?, ?, ?)
+        `;
 
-            res.json({
-                message: "Service Added Successfully"
-            });
+        db.query(
+            sql,
+            [
+                service_name,
+                short_description,
+                description,
+                image
+            ],
+            (err) => {
 
-        }
-    );
+                if (err) {
+                    console.error(err);
+
+                    return res.status(500).json({
+                        message: "Database error",
+                        error: err.message
+                    });
+                }
+
+                res.status(201).json({
+                    message: "Service Added Successfully",
+                    image
+                });
+
+            }
+        );
+
+    } catch (error) {
+
+        console.error("Cloudinary service upload error:", error);
+
+        res.status(500).json({
+            message: "Service upload failed",
+            error: error.message
+        });
+
+    }
 
 };
+
 
 // ==========================
 // Get Services
@@ -67,6 +92,7 @@ const getServices = (req, res) => {
     );
 
 };
+
 
 // ==========================
 // Get Service By ID
@@ -96,83 +122,109 @@ const getServiceById = (req, res) => {
 
 };
 
+
 // ==========================
 // Update Service
 // ==========================
-// Update Service
-const updateService = (req, res) => {
+const updateService = async (req, res) => {
 
-    const { id } = req.params;
+    try {
 
-    const {
-        service_name,
-        short_description,
-        description
-    } = req.body;
+        const { id } = req.params;
 
-    db.query(
+        const {
+            service_name,
+            short_description,
+            description
+        } = req.body;
 
-        "SELECT image FROM services WHERE id=?",
+        // Get existing service
+        db.query(
+            "SELECT image FROM services WHERE id=?",
+            [id],
+            async (err, rows) => {
 
-        [id],
+                if (err)
+                    return res.status(500).json(err);
 
-        (err, rows) => {
+                if (rows.length === 0) {
 
-            if (err)
-                return res.status(500).json(err);
-
-            if (rows.length === 0) {
-
-                return res.status(404).json({
-                    message: "Service not found"
-                });
-
-            }
-
-            const image = req.file
-                ? req.file.path.replace(/\\/g, "/")
-                : rows[0].image;
-
-            const sql = `
-                UPDATE services
-                SET
-                    service_name=?,
-                    short_description=?,
-                    description=?,
-                    image=?
-                WHERE id=?
-            `;
-
-            db.query(
-
-                sql,
-
-                [
-                    service_name,
-                    short_description,
-                    description,
-                    image,
-                    id
-                ],
-
-                (err) => {
-
-                    if (err)
-                        return res.status(500).json(err);
-
-                    res.json({
-                        message: "Service Updated Successfully"
+                    return res.status(404).json({
+                        message: "Service not found"
                     });
 
                 }
 
-            );
+                // Keep existing image if no new image is uploaded
+                let image = rows[0].image;
 
-        }
+                // Upload new image if provided
+                if (req.file) {
 
-    );
+                    image = await uploadToCloudinary(
+                        req.file,
+                        "amtec-technologies/services",
+                        "image"
+                    );
+
+                }
+
+                const sql = `
+                    UPDATE services
+                    SET
+                        service_name=?,
+                        short_description=?,
+                        description=?,
+                        image=?
+                    WHERE id=?
+                `;
+
+                db.query(
+                    sql,
+                    [
+                        service_name,
+                        short_description,
+                        description,
+                        image,
+                        id
+                    ],
+                    (err) => {
+
+                        if (err) {
+
+                            console.error(err);
+
+                            return res.status(500).json({
+                                message: "Database error",
+                                error: err.message
+                            });
+
+                        }
+
+                        res.json({
+                            message: "Service Updated Successfully",
+                            image
+                        });
+
+                    }
+                );
+
+            }
+        );
+
+    } catch (error) {
+
+        console.error("Cloudinary service update error:", error);
+
+        res.status(500).json({
+            message: "Service update failed",
+            error: error.message
+        });
+
+    }
 
 };
+
 
 // ==========================
 // Delete Service
@@ -182,10 +234,18 @@ const deleteService = (req, res) => {
     db.query(
         "DELETE FROM services WHERE id=?",
         [req.params.id],
-        (err) => {
+        (err, result) => {
 
             if (err)
                 return res.status(500).json(err);
+
+            if (result.affectedRows === 0) {
+
+                return res.status(404).json({
+                    message: "Service not found"
+                });
+
+            }
 
             res.json({
                 message: "Service Deleted Successfully"
@@ -195,6 +255,7 @@ const deleteService = (req, res) => {
     );
 
 };
+
 
 module.exports = {
 

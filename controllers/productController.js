@@ -1,39 +1,72 @@
 const db = require("../config/db");
+const uploadToCloudinary = require("../utils/cloudinaryUpload");
 
 // ==========================
 // Add Product
 // ==========================
-const addProduct = (req, res) => {
+const addProduct = async (req, res) => {
 
+    try {
 
-    const {
-        category_id,
-        brand,
-        product_name,
-        model_number,
-        short_description,
-        description,
-        specifications,
-        features,
-        price,
-        stock
-    } = req.body;
+        const {
+            category_id,
+            brand,
+            product_name,
+            model_number,
+            short_description,
+            description,
+            specifications,
+            features,
+            price,
+            stock
+        } = req.body;
 
-const imageFile = req.files?.find(file => file.fieldname === "image");
-const datasheetFile = req.files?.find(file => file.fieldname === "datasheet");
+        const imageFile = req.files?.find(
+            file => file.fieldname === "image"
+        );
 
-const image = imageFile
-    ? imageFile.path.replace(/\\/g, "/")
-    : null;
+        const datasheetFile = req.files?.find(
+            file => file.fieldname === "datasheet"
+        );
 
-const datasheet = datasheetFile
-    ? datasheetFile.path.replace(/\\/g, "/")
-    : null;
+        // Upload image to Cloudinary
+        const image = imageFile
+            ? await uploadToCloudinary(
+                imageFile,
+                "amtec-technologies/products",
+                "image"
+            )
+            : null;
 
+        // Upload datasheet to Cloudinary
+        const datasheet = datasheetFile
+            ? await uploadToCloudinary(
+                datasheetFile,
+                "amtec-technologies/datasheets",
+                "raw"
+            )
+            : null;
 
-    const sql = `
-        INSERT INTO products
-        (
+        const sql = `
+            INSERT INTO products
+            (
+                category_id,
+                brand,
+                product_name,
+                model_number,
+                short_description,
+                description,
+                specifications,
+                features,
+                image,
+                datasheet,
+                price,
+                stock
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        db.query(sql, [
             category_id,
             brand,
             product_name,
@@ -46,33 +79,35 @@ const datasheet = datasheetFile
             datasheet,
             price,
             stock
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+        ], (err) => {
 
-    db.query(sql, [
-        category_id,
-        brand,
-        product_name,
-        model_number,
-        short_description,
-        description,
-        specifications,
-        features,
-        image,
-        datasheet,
-        price,
-        stock
-    ], (err) => {
+            if (err) {
+                console.error(err);
 
-        if (err)
-            return res.status(500).json(err);
+                return res.status(500).json({
+                    message: "Database error",
+                    error: err.message
+                });
+            }
 
-        res.status(201).json({
-            message: "Product Added Successfully"
+            res.status(201).json({
+                message: "Product Added Successfully",
+                image,
+                datasheet
+            });
+
         });
 
-    });
+    } catch (error) {
+
+        console.error("Cloudinary upload error:", error);
+
+        res.status(500).json({
+            message: "Product upload failed",
+            error: error.message
+        });
+
+    }
 
 };
 
@@ -133,67 +168,175 @@ const getProductById = (req, res) => {
 // ==========================
 // Update Product
 // ==========================
-const updateProduct = (req, res) => {
+// ==========================
+// Update Product
+// ==========================
+const updateProduct = async (req, res) => {
 
-    const { id } = req.params;
+    try {
 
-    const {
-        category_id,
-        brand,
-        product_name,
-        model_number,
-        short_description,
-        description,
-        specifications,
-        features,
-        price,
-        stock,
-        status
-    } = req.body;
+        const { id } = req.params;
 
-    const sql = `
-        UPDATE products
-        SET
-            category_id=?,
-            brand=?,
-            product_name=?,
-            model_number=?,
-            short_description=?,
-            description=?,
-            specifications=?,
-            features=?,
-            price=?,
-            stock=?,
-            status=?
-        WHERE id=?
-    `;
+        const {
+            category_id,
+            brand,
+            product_name,
+            model_number,
+            short_description,
+            description,
+            specifications,
+            features,
+            price,
+            stock,
+            status
+        } = req.body;
 
-    db.query(sql, [
-        category_id,
-        brand,
-        product_name,
-        model_number,
-        short_description,
-        description,
-        specifications,
-        features,
-        price,
-        stock,
-        status,
-        id
-    ], (err) => {
+        // Find uploaded files
+        const imageFile = req.files?.find(
+            file => file.fieldname === "image"
+        );
 
-        if (err)
-            return res.status(500).json(err);
+        const datasheetFile = req.files?.find(
+            file => file.fieldname === "datasheet"
+        );
 
-        res.json({
-            message: "Product Updated Successfully"
+        // Get existing product
+        const selectSql = `
+            SELECT image, datasheet
+            FROM products
+            WHERE id = ?
+        `;
+
+        db.query(selectSql, [id], async (selectErr, result) => {
+
+            if (selectErr) {
+
+                console.error(selectErr);
+
+                return res.status(500).json({
+                    message: "Database error",
+                    error: selectErr.message
+                });
+
+            }
+
+            if (result.length === 0) {
+
+                return res.status(404).json({
+                    message: "Product not found"
+                });
+
+            }
+
+            // Keep existing Cloudinary URLs
+            let image = result[0].image;
+            let datasheet = result[0].datasheet;
+
+            // ==========================
+            // Upload New Image
+            // ==========================
+
+            if (imageFile) {
+
+                image = await uploadToCloudinary(
+                    imageFile,
+                    "amtec-technologies/products",
+                    "image"
+                );
+
+            }
+
+            // ==========================
+            // Upload New Datasheet
+            // ==========================
+
+            if (datasheetFile) {
+
+                datasheet = await uploadToCloudinary(
+                    datasheetFile,
+                    "amtec-technologies/datasheets",
+                    "raw"
+                );
+
+            }
+
+            // ==========================
+            // Update Database
+            // ==========================
+
+            const updateSql = `
+                UPDATE products
+                SET
+                    category_id=?,
+                    brand=?,
+                    product_name=?,
+                    model_number=?,
+                    short_description=?,
+                    description=?,
+                    specifications=?,
+                    features=?,
+                    image=?,
+                    datasheet=?,
+                    price=?,
+                    stock=?,
+                    status=?
+                WHERE id=?
+            `;
+
+            db.query(
+                updateSql,
+                [
+                    category_id,
+                    brand,
+                    product_name,
+                    model_number,
+                    short_description,
+                    description,
+                    specifications,
+                    features,
+                    image,
+                    datasheet,
+                    price,
+                    stock,
+                    status,
+                    id
+                ],
+                (updateErr) => {
+
+                    if (updateErr) {
+
+                        console.error(updateErr);
+
+                        return res.status(500).json({
+                            message: "Database update failed",
+                            error: updateErr.message
+                        });
+
+                    }
+
+                    res.json({
+                        message: "Product Updated Successfully",
+                        image,
+                        datasheet
+                    });
+
+                }
+            );
+
         });
 
-    });
+    } catch (error) {
+
+        console.error("Cloudinary update error:", error);
+
+        return res.status(500).json({
+            message: "Product update failed",
+            error: error.message
+        });
+
+    }
 
 };
-
 // ==========================
 // Delete Product
 // ==========================
