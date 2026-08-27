@@ -30,22 +30,26 @@ const addProduct = async (req, res) => {
         );
 
         // Upload image to Cloudinary
-        const image = imageFile
-            ? await uploadToCloudinary(
-                imageFile,
-                "amtec-technologies/products",
-                "image"
-            )
-            : null;
+        const imageResult = imageFile
+    ? await uploadToCloudinary(
+        imageFile,
+        "amtec-technologies/products",
+        "image"
+    )
+    : null;
+
+const image = imageResult?.url || null;
 
         // Upload datasheet to Cloudinary
-        const datasheet = datasheetFile
-            ? await uploadToCloudinary(
-                datasheetFile,
-                "amtec-technologies/datasheets",
-                "raw"
-            )
-            : null;
+       const datasheetResult = datasheetFile
+    ? await uploadToCloudinary(
+        datasheetFile,
+        "amtec-technologies/datasheets",
+        "raw"
+    )
+    : null;
+
+const datasheet = datasheetResult?.url || null;
 
         const sql = `
             INSERT INTO products
@@ -238,13 +242,15 @@ const updateProduct = async (req, res) => {
 
             if (imageFile) {
 
-                image = await uploadToCloudinary(
-                    imageFile,
-                    "amtec-technologies/products",
-                    "image"
-                );
+    const imageResult = await uploadToCloudinary(
+        imageFile,
+        "amtec-technologies/products",
+        "image"
+    );
 
-            }
+    image = imageResult?.url || image;
+
+}
 
             // ==========================
             // Upload New Datasheet
@@ -252,13 +258,15 @@ const updateProduct = async (req, res) => {
 
             if (datasheetFile) {
 
-                datasheet = await uploadToCloudinary(
-                    datasheetFile,
-                    "amtec-technologies/datasheets",
-                    "raw"
-                );
+    const datasheetResult = await uploadToCloudinary(
+        datasheetFile,
+        "amtec-technologies/datasheets",
+        "raw"
+    );
 
-            }
+    datasheet = datasheetResult?.url || datasheet;
+
+}
 
             // ==========================
             // Update Database
