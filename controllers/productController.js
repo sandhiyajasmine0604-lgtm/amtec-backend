@@ -20,6 +20,21 @@ const addProduct = async (req, res) => {
             price,
             stock
         } = req.body;
+         
+        const stock =
+    req.body.stock === "" ||
+    req.body.stock === undefined ||
+    req.body.stock === null
+        ? 0
+        : Number(req.body.stock);
+         
+
+const stock =
+    req.body.stock === "" ||
+    req.body.stock === undefined ||
+    req.body.stock === null
+        ? 0
+        : Number(req.body.stock);
 
         const imageFile = req.files?.find(
             file => file.fieldname === "image"
