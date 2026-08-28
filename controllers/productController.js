@@ -54,7 +54,9 @@ const stock =
     )
     : null;
 
-const image = imageResult?.url || null;
+const image = imageResult
+    ? imageResult.secure_url
+    : null;
 
         // Upload datasheet to Cloudinary
        const datasheetResult = datasheetFile
@@ -65,7 +67,9 @@ const image = imageResult?.url || null;
     )
     : null;
 
-const datasheet = datasheetResult?.url || null;
+const datasheet = datasheetResult
+    ? datasheetResult.secure_url
+    : null;
 
         const sql = `
             INSERT INTO products
