@@ -1,4 +1,3 @@
-
 const cloudinary = require("../config/cloudinary");
 const streamifier = require("streamifier");
 
@@ -19,11 +18,17 @@ function uploadToCloudinary(file, folder, resourceType = "auto") {
                     return reject(error);
                 }
 
-                resolve(result);
+                resolve({
+                    url: result.secure_url,
+                    public_id: result.public_id,
+                    resource_type: result.resource_type
+                });
             }
         );
 
-        streamifier.createReadStream(file.buffer).pipe(stream);
+        streamifier
+            .createReadStream(file.buffer)
+            .pipe(stream);
 
     });
 
