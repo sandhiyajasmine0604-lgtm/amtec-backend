@@ -22,13 +22,7 @@ console.log("Product Routes Loaded");
 
 const app = express();
 
-app.use(cors({
-    origin: [
-        "https://sandhiyajasmine0604-lgtm.github.io"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true
-}));
+app.use(cors({ origin: [ "https://sandhiyajasmine0604-lgtm.github.io", "http://127.0.0.1:5500", "http://localhost:5500" ], methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
