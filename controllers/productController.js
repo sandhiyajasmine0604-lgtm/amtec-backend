@@ -83,9 +83,7 @@ const datasheet = datasheetResult
                 specifications,
                 features,
                 image,
-                datasheet,
-                price,
-                stock
+                datasheet
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
@@ -100,9 +98,7 @@ const datasheet = datasheetResult
             specifications,
             features,
             image,
-            datasheet,
-            price,
-            stock
+            datasheet
         ], (err) => {
 
             if (err) {
@@ -210,8 +206,6 @@ const updateProduct = async (req, res) => {
             description,
             specifications,
             features,
-            price,
-            stock,
             status
         } = req.body;
 
@@ -305,8 +299,7 @@ const updateProduct = async (req, res) => {
                     features=?,
                     image=?,
                     datasheet=?,
-                    price=?,
-                    stock=?,
+                ,
                     status=?
                 WHERE id=?
             `;
@@ -324,8 +317,6 @@ const updateProduct = async (req, res) => {
                     features,
                     image,
                     datasheet,
-                    price,
-                    stock,
                     status,
                     id
                 ],
