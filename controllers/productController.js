@@ -299,7 +299,6 @@ const updateProduct = async (req, res) => {
                     features=?,
                     image=?,
                     datasheet=?,
-                ,
                     status=?
                 WHERE id=?
             `;
